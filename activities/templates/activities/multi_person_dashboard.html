@@ -1,0 +1,561 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Multi-Person Activity Dashboard{% endblock %}
+{% block page_title %}
+<i class="fas fa-users me-2"></i>Multi-Person Activity Dashboard
+{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button id="refresh-btn" class="btn btn-outline-primary">
+        <i class="fas fa-sync-alt me-1"></i>Refresh
+    </button>
+    <button id="auto-refresh-toggle" class="btn btn-outline-success" data-toggle="on">
+        <i class="fas fa-play me-1"></i>Auto Refresh
+    </button>
+    <button id="export-btn" class="btn btn-outline-info">
+        <i class="fas fa-download me-1"></i>Export Report
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Multi-Person Groups</h6>
+                        <h3 class="mb-0" id="multi-count">{{ total_multi_activities }}</h3>
+                    </div>
+                    <i class="fas fa-users fa-2x opacity-50"></i>
+                </div>
+                <small class="text-light">Last Hour</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Persons Detected</h6>
+                        <h3 class="mb-0" id="person-count">{{ total_persons_detected }}</h3>
+                    </div>
+                    <i class="fas fa-person fa-2x opacity-50"></i>
+                </div>
+                <small class="text-light">Pose-Based</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">Avg. Confidence</h6>
+                        <h3 class="mb-0" id="avg-confidence">85%</h3>
+                    </div>
+                    <i class="fas fa-chart-pie fa-2x opacity-50"></i>
+                </div>
+                <small class="text-light">Detection Accuracy</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title mb-0">High Confidence</h6>
+                        <h3 class="mb-0" id="high-conf">0</h3>
+                    </div>
+                    <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                </div>
+                <small class="text-light">&gt;85% Accuracy</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Environment Selection -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-building me-2"></i>Select Monitoring Environment
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for env in environments %}
+                    <div class="col-md-4 mb-3">
+                        <div class="env-card card h-100 environment-selector" data-env-id="{{ env.id }}" style="cursor: pointer;">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">{{ env.name }}</h6>
+                                <div class="env-stats">
+                                    <div class="stat">
+                                        <small class="text-muted">Multi-Person Groups</small>
+                                        <h4 class="env-multi-count mb-0">0</h4>
+                                    </div>
+                                    <div class="stat mt-2">
+                                        <small class="text-muted">Persons Detected</small>
+                                        <h4 class="env-person-count mb-0">0</h4>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <span class="badge bg-success">Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Distribution & Timeline -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Activity Distribution
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="distributionChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Activity Timeline (Last 12h)
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="timelineChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Multi-Person Activities -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-video me-2"></i>Multi-Person Activities (Last Hour)
+                </h6>
+                <span class="badge bg-success">
+                    <i class="fas fa-circle me-1"></i>Live Monitoring
+                </span>
+            </div>
+            <div class="card-body" id="multi-activities-container">
+                {% if multi_activities %}
+                    {% for activity in multi_activities %}
+                    <div class="activity-item mb-3 p-3 border rounded" data-activity-id="{{ activity.id }}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">
+                                    <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                                    {{ activity.environment.name }}
+                                </h6>
+                                <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
+                            </div>
+                            <span class="badge bg-primary">{{ activity.personactivity_set.count }} persons</span>
+                        </div>
+                        
+                        <!-- Persons Grid -->
+                        <div class="persons-grid mt-3">
+                            {% for person in activity.personactivity_set.all %}
+                            <div class="person-card" style="display: inline-block; margin-right: 15px; margin-bottom: 10px;">
+                                <div class="text-center">
+                                    <!-- Avatar -->
+                                    <div class="mb-2">
+                                        {% if person.user and person.user.profile.profile_picture %}
+                                            <img src="{{ person.user.profile.profile_picture.url }}" 
+                                                 class="rounded-circle" width="50" height="50"
+                                                 alt="{{ person.user.username }}" 
+                                                 title="{{ person.user.get_full_name }}">
+                                        {% else %}
+                                            <div class="rounded-circle bg-{% if person.user %}primary{% else %}secondary{% endif %} d-inline-flex align-items-center justify-content-center" 
+                                                 style="width: 50px; height: 50px;">
+                                                <i class="fas fa-{% if person.user %}user{% else %}user-secret{% endif %} text-white fa-lg"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Name -->
+                                    <div class="mb-2">
+                                        {% if person.user %}
+                                            <strong>{{ person.user.get_full_name|default:person.user.username }}</strong>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Unknown Person</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Activity Badge -->
+                                    <div class="mb-2">
+                                        <span class="badge badge-activity-{{ person.activity_type|lower }}">
+                                            {{ person.activity_type|upper }}
+                                        </span>
+                                    </div>
+                                    
+                                    <!-- Confidence Meter -->
+                                    <div class="confidence-meter" style="width: 80px;">
+                                        <div class="progress" style="height: 4px;">
+                                            <div class="progress-bar 
+                                                {% if person.confidence_score >= 85 %}bg-success
+                                                {% elif person.confidence_score >= 70 %}bg-warning
+                                                {% else %}bg-danger{% endif %}"
+                                                style="width: {{ person.confidence_score }}%">
+                                            </div>
+                                        </div>
+                                        <small class="text-muted">{{ person.confidence_score }}%</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No multi-person activities detected in the last hour.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Activity Breakdown -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-list me-2"></i>All Detected Activities (Last Hour)
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Person</th>
+                                <th>Activity</th>
+                                <th>Confidence</th>
+                                <th>Location</th>
+                                <th>Detection Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activities-table-body">
+                            {% for activity in person_activities %}
+                            <tr>
+                                <td>
+                                    {% if activity.user %}
+                                        <strong>{{ activity.user.username }}</strong>
+                                    {% else %}
+                                        <span class="text-muted">Unknown</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge badge-activity-{{ activity.activity_type|lower }}">
+                                        {{ activity.activity_type|upper }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress" style="width: 60px; height: 6px;">
+                                            <div class="progress-bar 
+                                                {% if activity.confidence_score >= 85 %}bg-success
+                                                {% elif activity.confidence_score >= 70 %}bg-warning
+                                                {% else %}bg-danger{% endif %}"
+                                                style="width: {{ activity.confidence_score }}%">
+                                            </div>
+                                        </div>
+                                        <span class="ms-2">{{ activity.confidence_score }}%</span>
+                                    </div>
+                                </td>
+                                <td>{{ activity.location|default:"N/A" }}</td>
+                                <td>
+                                    <small class="text-muted">{{ activity.timestamp|date:"H:i:s" }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge 
+                                        {% if activity.confidence_score >= 85 %}bg-success
+                                        {% elif activity.confidence_score >= 70 %}bg-warning text-dark
+                                        {% else %}bg-danger{% endif %}">
+                                        {% if activity.confidence_score >= 85 %}High
+                                        {% elif activity.confidence_score >= 70 %}Medium
+                                        {% else %}Low{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    No activities detected yet.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Activity Badge Colors */
+.badge-activity-walking { background-color: #27ae60 !important; }
+.badge-activity-running { background-color: #e74c3c !important; }
+.badge-activity-sitting { background-color: #3498db !important; }
+.badge-activity-standing { background-color: #9b59b6 !important; }
+.badge-activity-falling { background-color: #e67e22 !important; }
+.badge-activity-sleeping { background-color: #2c3e50 !important; }
+.badge-activity-unusual { background-color: #95a5a6 !important; }
+.badge-activity-cooking { background-color: #e59866 !important; }
+.badge-activity-exercising { background-color: #d35400 !important; }
+
+/* Environment Card Styling */
+.env-card {
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.env-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.env-card.selected {
+    border-color: #007bff;
+    background-color: rgba(0, 123, 255, 0.05);
+}
+
+/* Person Card Styling */
+.person-card {
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    min-width: 100px;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.person-card:hover {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Activity Item */
+.activity-item {
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+    transition: all 0.2s ease;
+}
+
+.activity-item:hover {
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Table Styling */
+table tbody tr {
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s ease;
+}
+
+table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Metrics Cards */
+.card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.card.bg-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important; }
+.card.bg-success { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%) !important; }
+.card.bg-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%) !important; }
+.card.bg-warning { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important; }
+
+/* Progress Bar Animation */
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* Confidence Meter */
+.confidence-meter {
+    margin: 0 auto;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+$(document).ready(function() {
+    let autoRefresh = false;
+    let refreshInterval;
+    
+    // Parse initial data
+    const activityDist = {{ activity_distribution|safe }};
+    const timelineData = {{ timeline_data|safe }};
+    const envActivities = {{ environment_activities|safe }};
+    
+    // Initialize charts
+    initializeCharts();
+    updateEnvironmentStats();
+    updateSummaryStats();
+    
+    // Refresh button
+    $('#refresh-btn').click(function() {
+        location.reload();
+    });
+    
+    // Auto-refresh toggle
+    $('#auto-refresh-toggle').click(function() {
+        autoRefresh = !autoRefresh;
+        if (autoRefresh) {
+            $(this).html('<i class="fas fa-pause me-1"></i>Pause');
+            $(this).removeClass('btn-outline-success').addClass('btn-outline-warning');
+            $(this).data('toggle', 'off');
+            refreshInterval = setInterval(() => {
+                location.reload();
+            }, 10000);
+        } else {
+            $(this).html('<i class="fas fa-play me-1"></i>Auto Refresh');
+            $(this).removeClass('btn-outline-warning').addClass('btn-outline-success');
+            $(this).data('toggle', 'on');
+            clearInterval(refreshInterval);
+        }
+    });
+    
+    // Export report
+    $('#export-btn').click(function() {
+        window.location.href = '/activities/api/export-report/';
+    });
+    
+    // Environment selection
+    $('.environment-selector').click(function() {
+        $('.environment-selector').removeClass('selected');
+        $(this).addClass('selected');
+        const envId = $(this).data('env-id');
+        console.log('Selected environment:', envId);
+    });
+    
+    function initializeCharts() {
+        // Distribution Chart
+        if (Object.keys(activityDist).length > 0) {
+            const distCtx = document.getElementById('distributionChart');
+            const colors = {
+                'walking': '#27ae60',
+                'running': '#e74c3c',
+                'sitting': '#3498db',
+                'standing': '#9b59b6',
+                'falling': '#e67e22',
+                'sleeping': '#2c3e50',
+                'unusual': '#95a5a6',
+                'cooking': '#e59866',
+                'exercising': '#d35400'
+            };
+            
+            new Chart(distCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(activityDist),
+                    datasets: [{
+                        data: Object.values(activityDist),
+                        backgroundColor: Object.keys(activityDist).map(k => colors[k] || '#95a5a6')
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+        
+        // Timeline Chart
+        if (Object.keys(timelineData).length > 0) {
+            const timelineCtx = document.getElementById('timelineChart');
+            new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(timelineData),
+                    datasets: [{
+                        label: 'Activities Detected',
+                        data: Object.values(timelineData),
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true }
+                    },
+                    plugins: {
+                        legend: { display: true }
+                    }
+                }
+            });
+        }
+    }
+    
+    function updateEnvironmentStats() {
+        for (const [envId, data] of Object.entries(envActivities)) {
+            const card = $(`.environment-selector[data-env-id="${envId}"]`);
+            card.find('.env-multi-count').text(data.multi_count);
+            card.find('.env-person-count').text(data.person_count);
+        }
+    }
+    
+    function updateSummaryStats() {
+        $.ajax({
+            url: '/activities/api/activity-summary/',
+            type: 'GET',
+            success: function(response) {
+                if (response.success) {
+                    const summary = response.summary;
+                    $('#multi-count').text(summary.multi_activities_last_hour);
+                    $('#person-count').text(summary.person_activities_last_hour);
+                    $('#avg-confidence').text(summary.average_confidence + '%');
+                    $('#high-conf').text(summary.high_confidence_detections);
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

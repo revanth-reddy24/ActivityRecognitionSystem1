@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Feedback - Activity Recognition System{% endblock %}
+{% block page_title %}Provide Feedback{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-comment me-2"></i>Share Your Feedback
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    Your feedback helps us improve the activity recognition system. Please share your experience 
+                    and suggestions for improvement.
+                </p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.activity.id_for_label }}" class="form-label">Related Activity (Optional)</label>
+                        {{ form.activity }}
+                        {% if form.activity.errors %}
+                        <div class="text-danger small">{{ form.activity.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.rating.id_for_label }}" class="form-label">Rating</label>
+                        {{ form.rating }}
+                        {% if form.rating.errors %}
+                        <div class="text-danger small">{{ form.rating.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.comment.id_for_label }}" class="form-label">Comments</label>
+                        {{ form.comment }}
+                        {% if form.comment.errors %}
+                        <div class="text-danger small">{{ form.comment.errors }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            Please be specific about what you liked or what could be improved.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'users:dashboard' %}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Previous Feedback -->
+        <div class="card card-custom mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Your Previous Feedback
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user.feedback_set.all %}
+                <div class="list-group">
+                    {% for feedback in user.feedback_set.all %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                Rating: 
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= feedback.rating %}
+                                    <i class="fas fa-star text-warning"></i>
+                                    {% else %}
+                                    <i class="far fa-star text-warning"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </h6>
+                            <small>{{ feedback.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        <p class="mb-1">{{ feedback.comment }}</p>
+                        {% if feedback.activity %}
+                        <small class="text-muted">Related to: {{ feedback.activity.get_activity_type_display }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">You haven't submitted any feedback yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

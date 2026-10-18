@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard - Activity Recognition System{% endblock %}
+{% block page_title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Total Users</h6>
+                    <h3 class="text-white">{{ total_users }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-users fa-2x text-white-50"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-white-50">
+                    <i class="fas fa-arrow-up me-1"></i>
+                    {{ total_admins }} admins
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Total Activities</h6>
+                    <h3 class="text-white">{{ total_activities }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-running fa-2x text-white-50"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-white-50">
+                    <i class="fas fa-clock me-1"></i>
+                    Today: {{ today_activities }}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">System Uptime</h6>
+                    <h3 class="text-white">99.8%</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-server fa-2x text-white-50"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-white-50">
+                    <i class="fas fa-check-circle me-1"></i>
+                    All systems operational
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Feedback Received</h6>
+                    <h3 class="text-white">{{ total_feedbacks }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-comments fa-2x text-white-50"></i>
+                </div>
+            </div>
+            <div class="mt-2">
+                <small class="text-white-50">
+                    <i class="fas fa-star me-1"></i>
+                    Avg rating: 4.2/5
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Activities -->
+    <div class="col-lg-8 mb-4">
+        <div class="card card-custom">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Recent System Activities
+                </h5>
+                <a href="{% url 'admin_panel:activity_reports' %}" class="btn btn-sm btn-outline-primary">
+                    View Reports
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_activities %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Activity</th>
+                                <th>Time</th>
+                                <th>Confidence</th>
+                                <th>Environment</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity in recent_activities %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" 
+                                             style="width: 30px; height: 30px;">
+                                            <i class="fas fa-user text-white" style="font-size: 0.8rem;"></i>
+                                        </div>
+                                        {{ activity.user.username }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="activity-badge badge-{{ activity.activity_type }}">
+                                        {{ activity.get_activity_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ activity.timestamp|timesince }} ago</td>
+                                <td>
+                                    <div class="progress" style="height: 6px; width: 80px;">
+                                        <div class="progress-bar {% if activity.confidence_score > 80 %}bg-success{% elif activity.confidence_score > 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                             style="width: {{ activity.confidence_score }}%">
+                                        </div>
+                                    </div>
+                                    <small>{{ activity.confidence_score }}%</small>
+                                </td>
+                                <td>{{ activity.environment.name|default:"N/A" }}</td>
+                                <td>
+                                    {% if activity.is_verified %}
+                                    <span class="badge bg-success">Verified</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-running fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No activities recorded yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- System Overview -->
+    <div class="col-lg-4 mb-4">
+        <!-- System Performance -->
+        <div class="card card-custom mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tachometer-alt me-2"></i>System Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>CPU Usage</span>
+                        <span>{{ system_performance.cpu_usage }}%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar {% if system_performance.cpu_usage < 70 %}bg-success{% elif system_performance.cpu_usage < 90 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             style="width: {{ system_performance.cpu_usage }}%">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Memory Usage</span>
+                        <span>{{ system_performance.memory_usage }}%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar {% if system_performance.memory_usage < 70 %}bg-info{% elif system_performance.memory_usage < 90 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             style="width: {{ system_performance.memory_usage }}%">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Disk Usage</span>
+                        <span>{{ system_performance.disk_usage }}%</span>
+                    </div>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar {% if system_performance.disk_usage < 70 %}bg-success{% elif system_performance.disk_usage < 90 %}bg-warning{% else %}bg-danger{% endif %}" 
+                             style="width: {{ system_performance.disk_usage }}%">
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Active Users</span>
+                        <span>{{ system_performance.active_users }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'admin_panel:user_management' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-user-cog me-1"></i> Manage Users
+                    </a>
+                    <a href="{% url 'admin_panel:system_config' %}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-cogs me-1"></i> System Config
+                    </a>
+                    <a href="{% url 'admin_panel:model_management' %}" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-brain me-1"></i> Model Management
+                    </a>
+                    <a href="{% url 'admin_panel:audit_logs' %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-clipboard-list me-1"></i> View Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Activity Distribution -->
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Activity Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for dist in activity_distribution %}
+                    <div class="col-md-2 col-sm-4 col-6 text-center mb-3">
+                        <div class="activity-badge badge-{{ dist.activity_type }} mb-2" style="display: inline-block;">
+                            {{ dist.get_activity_type_display }}
+                        </div>
+                        <div class="h5 mb-0">{{ dist.count }}</div>
+                        <small class="text-muted">
+                            {{ dist.percentage|default:0 }}%
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Notifications - Activity Recognition System{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button class="btn btn-outline-primary" id="mark-all-read">
+        <i class="fas fa-check-double me-1"></i> Mark All Read
+    </button>
+    <a href="{% url 'notifications:settings' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-cog me-1"></i> Settings
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bell me-2"></i>Your Notifications
+                </h5>
+                <div>
+                    <span class="badge bg-primary">{{ notifications.count }} total</span>
+                    <span class="badge bg-warning">{{ unread_count }} unread</span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                    <div class="list-group-item {% if not notification.is_read %}bg-light{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <div class="flex-grow-1 me-3">
+                                <h6 class="mb-1">
+                                    {{ notification.title }}
+                                    {% if not notification.is_read %}
+                                    <span class="badge bg-warning ms-2">New</span>
+                                    {% endif %}
+                                </h6>
+                                <p class="mb-1">{{ notification.message }}</p>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    {{ notification.created_at|timesince }} ago
+                                    •
+                                    <span class="badge bg-{% if notification.priority == 'high' %}danger{% elif notification.priority == 'medium' %}warning{% else %}info{% endif %}">
+                                        {{ notification.get_priority_display }}
+                                    </span>
+                                    •
+                                    <span class="badge bg-secondary">
+                                        {{ notification.get_notification_type_display }}
+                                    </span>
+                                </small>
+                            </div>
+                            <div class="flex-shrink-0">
+                                {% if not notification.is_read %}
+                                <a href="{% url 'notifications:mark_read' notification.id %}" 
+                                   class="btn btn-sm btn-outline-success mark-read-btn"
+                                   data-notification-id="{{ notification.id }}">
+                                    <i class="fas fa-check"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if notification.activity_context %}
+                        <div class="mt-2 p-2 bg-white rounded border">
+                            <small class="text-muted">Activity Context:</small>
+                            <pre class="mb-0 small">{{ notification.activity_context|pprint }}</pre>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if is_paginated %}
+                <nav aria-label="Notification pagination" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No notifications</h5>
+                    <p class="text-muted">You're all caught up! New notifications will appear here.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Mark individual notification as read
+    $('.mark-read-btn').click(function(e) {
+        e.preventDefault();
+        const btn = $(this);
+        const notificationId = btn.data('notification-id');
+        
+        $.ajax({
+            url: btn.attr('href'),
+            type: 'GET',
+            success: function(response) {
+                btn.closest('.list-group-item').removeClass('bg-light');
+                btn.closest('.list-group-item').find('.badge.bg-warning').remove();
+                btn.remove();
+                updateUnreadCount();
+            },
+            error: function() {
+                alert('Error marking notification as read.');
+            }
+        });
+    });
+    
+    // Mark all as read
+    $('#mark-all-read').click(function() {
+        if (confirm('Mark all notifications as read?')) {
+            // This would typically make an AJAX call to mark all as read
+            $('.mark-read-btn').each(function() {
+                $(this).click();
+            });
+            alert('All notifications marked as read!');
+        }
+    });
+    
+    function updateUnreadCount() {
+        // Update the unread count badge
+        const unreadCount = $('.mark-read-btn').length;
+        $('.badge.bg-warning').text(unreadCount + ' unread');
+        if (unreadCount === 0) {
+            $('.badge.bg-warning').hide();
+        }
+    }
+});
+</script>
+{% endblock %}

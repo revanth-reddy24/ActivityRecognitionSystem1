@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Model Management - Admin Panel{% endblock %}
+{% block page_title %}Model Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Activity Models</h5>
+    </div>
+    <div class="card-body">
+        {% if models %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Version</th>
+                        <th>Status</th>
+                        <th>Uploaded At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in models %}
+                    <tr>
+                        <td>{{ m.name }}</td>
+                        <td>{{ m.version }}</td>
+                        <td>{{ m.get_status_display }}</td>
+                        <td>{{ m.created_at }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p class="text-muted">No models uploaded yet.</p>
+        {% endif %}
+
+        <hr />
+        <h6>Upload New Model</h6>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="mb-3">
+                {{ form.name.label_tag }}
+                {{ form.name }}
+                {{ form.name.errors }}
+            </div>
+            <div class="mb-3">
+                {{ form.file.label_tag }}
+                {{ form.file }}
+                {{ form.file.errors }}
+            </div>
+            <button type="submit" class="btn btn-primary">Upload</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

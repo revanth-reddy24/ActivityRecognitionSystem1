@@ -1,0 +1,42 @@
+''''
+{% extends "base.html" %}
+{% block title %}Environment Management - Admin Panel{% endblock %}
+{% block page_title %}Environment Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">Environments</h5></div>
+    <div class="card-body">
+        {% if environments %}
+            <ul class="list-group">
+                {% for env in environments %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ env.name }}</strong>
+                        <div class="text-muted">{{ env.description }}</div>
+                    </div>
+                    {% if env.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-muted">No environments configured.</p>
+        {% endif %}
+
+        <hr />
+        <h6>Add Environment</h6>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            <div class="mb-3">{{ form.name.label_tag }}{{ form.name }}{{ form.name.errors }}</div>
+            <div class="mb-3">{{ form.description.label_tag }}{{ form.description }}{{ form.description.errors }}</div>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+''''

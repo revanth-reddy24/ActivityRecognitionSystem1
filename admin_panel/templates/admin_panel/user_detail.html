@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block title %}User Details - Activity Recognition System{% endblock %}
+{% block page_title %}User Details: {{ user_detail.username }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'admin_panel:user_management' %}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i> Back to Users
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-circle me-2"></i>User Information
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                {% if user_detail.profile.profile_picture %}
+                <img src="{{ user_detail.profile.profile_picture.url }}" 
+                     class="rounded-circle mb-3" 
+                     width="150" height="150" 
+                     alt="{{ user_detail.username }}">
+                {% else %}
+                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto mb-3" 
+                     style="width: 150px; height: 150px;">
+                    <i class="fas fa-user text-white" style="font-size: 3rem;"></i>
+                </div>
+                {% endif %}
+                
+                <h4>{{ user_detail.get_full_name|default:user_detail.username }}</h4>
+                <p class="text-muted">@{{ user_detail.username }}</p>
+                
+                <div class="d-grid gap-2">
+                    <span class="badge bg-{% if user_detail.user_type == 'admin' %}danger{% else %}info{% endif %}">
+                        {{ user_detail.get_user_type_display }}
+                    </span>
+                    {% if user_detail.is_active %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card card-custom mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cog me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if user_detail.is_active %}
+                    <form method="post" action="{% url 'admin_panel:user_management' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ user_detail.id }}">
+                        <input type="hidden" name="action" value="deactivate">
+                        <button type="submit" class="btn btn-outline-warning w-100" 
+                                onclick="return confirm('Deactivate this user?')">
+                            <i class="fas fa-user-slash me-1"></i> Deactivate User
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'admin_panel:user_management' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ user_detail.id }}">
+                        <input type="hidden" name="action" value="activate">
+                        <button type="submit" class="btn btn-outline-success w-100">
+                            <i class="fas fa-user-check me-1"></i> Activate User
+                        </button>
+                    </form>
+                    {% endif %}
+                    
+                    {% if user_detail != request.user %}
+                    <form method="post" action="{% url 'admin_panel:user_management' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="user_id" value="{{ user_detail.id }}">
+                        <input type="hidden" name="action" value="delete">
+                        <button type="submit" class="btn btn-outline-danger w-100" 
+                                onclick="return confirm('Permanently delete this user?')">
+                            <i class="fas fa-trash me-1"></i> Delete User
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-8 mb-4">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Personal Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3">
+                        <strong>Username:</strong>
+                    </div>
+                    <div class="col-sm-9">
+                        {{ user_detail.username }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-sm-3">
+                        <strong>Email:</strong>
+                    </div>
+                    <div class="col-sm-9">
+                        {{ user_detail.email|default:"Not provided" }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-sm-3">
+                        <strong>Phone:</strong>
+                    </div>
+                    <div class="col-sm-9">
+                        {{ user_detail.phone|default:"Not provided" }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-sm-3">
+                        <strong>Address:</strong>
+                    </div>
+                    <div class="col-sm-9">
+                        {{ user_detail.address|default:"Not provided"|linebreaks }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-sm-3">
+                        <strong>Contact Info:</strong>
+                    </div>
+                    <div class="col-sm-9">
+                        {{ user_detail.profile.contact_info|default:"Not provided"|linebreaks }}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-sm-3">
+                        <strong>Member Since:</strong>
+                    </div>
+                    <div class="col-sm-9">
+                        {{ user_detail.date_joined|date:"F d, Y" }}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-sm-3">
+                        <strong>Last Login:</strong>
+                    </div>
+                    <div class="col-sm-9">
+                        {{ user_detail.last_login|date:"F d, Y H:i"|default:"Never" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card card-custom mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Activity Statistics
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-primary">{{ user_activities.count }}</h4>
+                            <small class="text-muted">Total Activities</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-success">{{ today_activities.count }}</h4>
+                            <small class="text-muted">Today</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-info">{{ week_activities.count }}</h4>
+                            <small class="text-muted">This Week</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <h4 class="text-warning">{{ user_feedbacks.count }}</h4>
+                            <small class="text-muted">Feedbacks</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activities -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Activities
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user_activities %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Activity</th>
+                                <th>Time</th>
+                                <th>Confidence</th>
+                                <th>Location</th>
+                                <th>Environment</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity in user_activities %}
+                            <tr>
+                                <td>
+                                    <span class="activity-badge badge-{{ activity.activity_type }}">
+                                        {{ activity.get_activity_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ activity.timestamp|date:"M d, Y" }}</small><br>
+                                    <small class="text-muted">{{ activity.timestamp|time:"H:i:s" }}</small>
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 6px; width: 80px;">
+                                        <div class="progress-bar {% if activity.confidence_score > 80 %}bg-success{% elif activity.confidence_score > 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                             style="width: {{ activity.confidence_score }}%">
+                                        </div>
+                                    </div>
+                                    <small>{{ activity.confidence_score }}%</small>
+                                </td>
+                                <td>{{ activity.location|default:"N/A" }}</td>
+                                <td>
+                                    {% if activity.environment %}
+                                    <span class="badge bg-info">{{ activity.environment.name }}</span>
+                                    {% else %}
+                                    <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if activity.is_verified %}
+                                    <span class="badge bg-success">Verified</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No activities recorded for this user.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Feedback -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-comments me-2"></i>Recent Feedback
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if user_feedbacks %}
+                <div class="list-group">
+                    {% for feedback in user_feedbacks %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                Rating: 
+                                {% for i in "12345" %}
+                                    {% if forloop.counter <= feedback.rating %}
+                                    <i class="fas fa-star text-warning"></i>
+                                    {% else %}
+                                    <i class="far fa-star text-warning"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </h6>
+                            <small>{{ feedback.created_at|date:"M d, Y" }}</small>
+                        </div>
+                        <p class="mb-1">{{ feedback.comment }}</p>
+                        {% if feedback.activity %}
+                        <small class="text-muted">Related to: {{ feedback.activity.get_activity_type_display }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No feedback submitted by this user.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

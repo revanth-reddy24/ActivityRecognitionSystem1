@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+{% block title %}Multi-Person View - Activity Recognition System{% endblock %}
+{% block page_title %}Multi-Person Activity Monitoring{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button id="refresh-btn" class="btn btn-outline-primary">
+        <i class="fas fa-sync-alt me-1"></i> Refresh
+    </button>
+    <button id="auto-refresh-toggle" class="btn btn-outline-success">
+        <i class="fas fa-play me-1"></i> Auto Refresh
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Environment Selection -->
+    <div class="col-12 mb-4">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-building me-2"></i>Select Environment
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for env in environments %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card environment-card {% if forloop.first %}border-primary{% endif %}" 
+                             data-environment-id="{{ env.id }}">
+                            <div class="card-body text-center">
+                                <i class="fas fa-building fa-2x text-primary mb-2"></i>
+                                <h6>{{ env.name }}</h6>
+                                <small class="text-muted">{{ env.zones|length }} zones</small>
+                                <div class="mt-2">
+                                    <span class="badge bg-{% if env.is_active %}success{% else %}secondary{% endif %}">
+                                        {% if env.is_active %}Active{% else %}Inactive{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="col-12 text-center py-4">
+                        <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No environments configured.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Multi-Person Activities -->
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>Current Multi-Person Activities
+                </h5>
+                <span class="badge bg-success" id="status-indicator">
+                    <i class="fas fa-circle me-1"></i> Monitoring
+                </span>
+            </div>
+            <div class="card-body">
+                {% if multi_activities %}
+                <div class="row" id="multi-activities-container">
+                    {% for multi_activity in multi_activities %}
+                    <div class="col-lg-6 mb-4">
+                        <div class="card activity-card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    {{ multi_activity.environment.name }}
+                                </h6>
+                                <small class="text-muted">{{ multi_activity.timestamp|timesince }} ago</small>
+                            </div>
+                            <div class="card-body">
+                                <div class="participants-list">
+                                    {% for participant in multi_activity.personactivity_set.all %}
+                                    <div class="d-flex align-items-center mb-3 p-2 border rounded">
+                                        <div class="flex-shrink-0">
+                                            {% if participant.user and participant.user.profile.profile_picture %}
+                                            <img src="{{ participant.user.profile.profile_picture.url }}" 
+                                                 class="rounded-circle" width="40" height="40" 
+                                                 alt="{% if participant.user %}{{ participant.user.username }}{% else %}Unknown{% endif %}">
+                                            {% else %}
+                                            <div class="rounded-circle {% if participant.user %}bg-primary{% else %}bg-secondary{% endif %} d-flex align-items-center justify-content-center" 
+                                                 style="width: 40px; height: 40px;">
+                                                <i class="fas fa-{% if participant.user %}user{% else %}user-secret{% endif %} text-white"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            {% if participant.user %}
+                                            <h6 class="mb-0">{{ participant.user.get_full_name|default:participant.user.username }}</h6>
+                                            {% else %}
+                                            <h6 class="mb-0"><span class="badge bg-secondary">Unidentified Person</span></h6>
+                                            {% endif %}
+                                            <div class="d-flex align-items-center">
+                                                <span class="activity-badge badge-{{ participant.activity_type }} me-2">
+                                                    {{ participant.activity_type|upper }}
+                                                </span>
+                                                <small class="text-muted">{{ participant.confidence_score|floatformat:1 }}% confidence</small>
+                                            </div>
+                                        </div>
+                                        <div class="flex-shrink-0">
+                                            <small class="text-muted">{{ participant.location }}</small>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Pose-Based Detections -->
+                {% if person_activities %}
+                <div class="row">
+                    <div class="col-12 mb-4">
+                        <h6 class="text-secondary mt-3 mb-2">
+                            <i class="fas fa-person me-2"></i>Pose-Based Detections (Last Hour)
+                        </h6>
+                    </div>
+                    {% for pa in person_activities %}
+                    <div class="col-lg-6 mb-4">
+                        <div class="card activity-card">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <span class="badge bg-secondary me-2"><i class="fas fa-person"></i> Pose</span>
+                                        {{ pa.activity_type|upper }}
+                                    </h6>
+                                    <small class="text-muted">{{ pa.timestamp|timesince }} ago</small>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="flex-grow-1">
+                                        <p class="mb-1"><strong>Confidence:</strong></p>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar {% if pa.confidence_score > 80 %}bg-success{% elif pa.confidence_score > 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ pa.confidence_score }}%">
+                                            </div>
+                                        </div>
+                                        <small>{{ pa.confidence_score }}%</small>
+                                    </div>
+                                </div>
+                                <p class="mb-1"><strong>Location:</strong> {{ pa.location|default:"N/A" }}</p>
+                                <p class="mb-1"><strong>Detected at:</strong> {{ pa.timestamp|date:"M d, Y H:i:s" }}</p>
+                                {% if pa.pose %}
+                                <p class="mb-0"><strong>Status:</strong> <span class="badge bg-info">Pose Data Available</span></p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if not multi_activities and not person_activities %}
+                <div class="text-center py-5">
+                    <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No multi-person activities detected</h5>
+                    <p class="text-muted">Multi-person activities will appear here when detected.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity Statistics -->
+<div class="row mt-4">
+    <div class="col-md-6 mb-4">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Activity Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityDistributionChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6 mb-4">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Activity Timeline
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityTimelineChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let autoRefresh = false;
+    let refreshInterval;
+    
+    // Environment selection
+    $('.environment-card').click(function() {
+        $('.environment-card').removeClass('border-primary');
+        $(this).addClass('border-primary');
+        const envId = $(this).data('environment-id');
+        loadMultiActivities(envId);
+    });
+    
+    // Auto-refresh toggle
+    $('#auto-refresh-toggle').click(function() {
+        autoRefresh = !autoRefresh;
+        if (autoRefresh) {
+            $(this).html('<i class="fas fa-pause me-1"></i> Pause');
+            $(this).removeClass('btn-outline-success').addClass('btn-outline-warning');
+            refreshInterval = setInterval(() => {
+                const envId = $('.environment-card.border-primary').data('environment-id');
+                loadMultiActivities(envId);
+            }, 5000);
+        } else {
+            $(this).html('<i class="fas fa-play me-1"></i> Auto Refresh');
+            $(this).removeClass('btn-outline-warning').addClass('btn-outline-success');
+            clearInterval(refreshInterval);
+        }
+    });
+    
+    function loadMultiActivities(environmentId) {
+        // This would typically make an AJAX call to get updated activities
+        console.log('Loading activities for environment:', environmentId);
+        // Update the status indicator
+        $('#status-indicator').html('<i class="fas fa-sync-alt fa-spin me-1"></i> Updating...');
+        setTimeout(() => {
+            $('#status-indicator').html('<i class="fas fa-circle me-1"></i> Monitoring');
+        }, 1000);
+    }
+    
+    // Initialize charts and load data
+    initializeCharts();
+    loadDistributionData();
+    
+    function loadDistributionData() {
+        $.ajax({
+            url: '{% url "activities:get_distribution" %}',
+            type: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                if (response.distribution) {
+                    updateDistributionChart(response.distribution);
+                }
+            },
+            error: function(error) {
+                console.log('Error loading distribution data:', error);
+            }
+        });
+    }
+    
+    function updateDistributionChart(distribution) {
+        const labels = Object.keys(distribution);
+        const data = Object.values(distribution);
+        const colors = {
+            'WALKING': '#27ae60',
+            'RUNNING': '#e74c3c',
+            'SITTING': '#3498db',
+            'STANDING': '#9b59b6',
+            'FALLING': '#e67e22',
+            'SLEEPING': '#2c3e50',
+            'UNUSUAL': '#95a5a6'
+        };
+        
+        const distCtx = document.getElementById('activityDistributionChart');
+        if (window.distributionChart) {
+            window.distributionChart.destroy();
+        }
+        
+        window.distributionChart = new Chart(distCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: labels.map(l => colors[l] || '#95a5a6')
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    }
+    
+    function initializeCharts() {
+        // Activity Timeline Chart - Initialize with empty data
+        const timelineCtx = document.getElementById('activityTimelineChart');
+        new Chart(timelineCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Activities (Pose + Image)',
+                    data: [],
+                    borderColor: '#3498db',
+                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            usePointStyle: true
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.environment-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.environment-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.activity-card {
+    transition: all 0.3s ease;
+}
+
+.activity-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+</style>
+{% endblock %}

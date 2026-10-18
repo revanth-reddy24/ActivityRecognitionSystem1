@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}User Management - Activity Recognition System{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+    <i class="fas fa-user-plus me-1"></i> Add User
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>System Users
+                </h5>
+                <span class="badge bg-primary">{{ users.count }} users</span>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Joined</th>
+                                <th>Last Login</th>
+                                <th>Activities</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user_obj in users %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if user_obj.profile.profile_picture %}
+                                        <img src="{{ user_obj.profile.profile_picture.url }}" 
+                                             class="rounded-circle me-2" 
+                                             width="32" height="32" 
+                                             alt="{{ user_obj.username }}">
+                                        {% else %}
+                                        <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center me-2" 
+                                             style="width: 32px; height: 32px;">
+                                            <i class="fas fa-user text-white" style="font-size: 0.8rem;"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold">{{ user_obj.username }}</div>
+                                            <small class="text-muted">
+                                                {{ user_obj.get_full_name|default:"No name" }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>{{ user_obj.email|default:"Not provided" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if user_obj.user_type == 'admin' %}danger{% else %}info{% endif %}">
+                                        {{ user_obj.get_user_type_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if user_obj.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ user_obj.date_joined|date:"M d, Y" }}</small>
+                                </td>
+                                <td>
+                                    <small>
+                                        {% if user_obj.last_login %}
+                                        {{ user_obj.last_login|timesince }} ago
+                                        {% else %}
+                                        Never
+                                        {% endif %}
+                                    </small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ user_obj.activities.count }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'admin_panel:user_detail' user_obj.id %}" 
+                                           class="btn btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button class="btn btn-outline-warning" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editUserModal{{ user_obj.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% if user_obj.is_active %}
+                                        <form method="post" action="{% url 'admin_panel:user_management' %}" 
+                                              class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ user_obj.id }}">
+                                            <input type="hidden" name="action" value="deactivate">
+                                            <button type="submit" class="btn btn-outline-warning" 
+                                                    onclick="return confirm('Deactivate this user?')">
+                                                <i class="fas fa-user-slash"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <form method="post" action="{% url 'admin_panel:user_management' %}" 
+                                              class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ user_obj.id }}">
+                                            <input type="hidden" name="action" value="activate">
+                                            <button type="submit" class="btn btn-outline-success">
+                                                <i class="fas fa-user-check"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                        {% if user_obj != request.user %}
+                                        <form method="post" action="{% url 'admin_panel:user_management' %}" 
+                                              class="d-inline">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="user_id" value="{{ user_obj.id }}">
+                                            <input type="hidden" name="action" value="delete">
+                                            <button type="submit" class="btn btn-outline-danger" 
+                                                    onclick="return confirm('Permanently delete this user?')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'admin_panel:user_management' %}">
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" name="username" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" name="email" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">First Name</label>
+                            <input type="text" class="form-control" name="first_name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Last Name</label>
+                            <input type="text" class="form-control" name="last_name">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" class="form-control" name="password" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">User Type</label>
+                            <select class="form-select" name="user_type">
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="form-control" name="phone">
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_active" checked>
+                        <label class="form-check-label">Active User</label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Update Profile - Activity Recognition System{% endblock %}
+{% block page_title %}Update Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-user-edit me-2"></i>Edit Profile Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ user_form.first_name.id_for_label }}" class="form-label">First Name</label>
+                            {{ user_form.first_name }}
+                            {% if user_form.first_name.errors %}
+                            <div class="text-danger small">{{ user_form.first_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ user_form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                            {{ user_form.last_name }}
+                            {% if user_form.last_name.errors %}
+                            <div class="text-danger small">{{ user_form.last_name.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ user_form.email.id_for_label }}" class="form-label">Email</label>
+                            {{ user_form.email }}
+                            {% if user_form.email.errors %}
+                            <div class="text-danger small">{{ user_form.email.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ user_form.phone.id_for_label }}" class="form-label">Phone</label>
+                            {{ user_form.phone }}
+                            {% if user_form.phone.errors %}
+                            <div class="text-danger small">{{ user_form.phone.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ user_form.address.id_for_label }}" class="form-label">Address</label>
+                        {{ user_form.address }}
+                        {% if user_form.address.errors %}
+                        <div class="text-danger small">{{ user_form.address.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ profile_form.profile_picture.id_for_label }}" class="form-label">Profile Picture</label>
+                        {{ profile_form.profile_picture }}
+                        {% if profile_form.profile_picture.errors %}
+                        <div class="text-danger small">{{ profile_form.profile_picture.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ profile_form.contact_info.id_for_label }}" class="form-label">Contact Information</label>
+                        {{ profile_form.contact_info }}
+                        {% if profile_form.contact_info.errors %}
+                        <div class="text-danger small">{{ profile_form.contact_info.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Update Profile</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

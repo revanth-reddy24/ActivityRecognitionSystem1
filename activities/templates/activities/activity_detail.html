@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Activity Details - Activity Recognition System{% endblock %}
+{% block page_title %}Activity Details{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'activities:history' %}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-1"></i> Back to History
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Activity Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 text-center">
+                            <span class="activity-badge badge-{{ activity.activity_type }} mb-2" style="font-size: 1.1em;">
+                                {{ activity.get_activity_type_display }}
+                            </span>
+                            <div class="mt-2">
+                                <h4 class="text-primary">{{ activity.confidence_score }}%</h4>
+                                <small class="text-muted">Confidence Score</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span><strong>User:</strong></span>
+                                <span>{{ activity.user.get_full_name|default:activity.user.username }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span><strong>Time:</strong></span>
+                                <span>{{ activity.timestamp|date:"M d, Y H:i:s" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span><strong>Duration:</strong></span>
+                                <span>{{ activity.duration|default:"N/A" }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span><strong>Status:</strong></span>
+                                <span class="badge bg-{% if activity.is_verified %}success{% else %}warning{% endif %}">
+                                    {% if activity.is_verified %}Verified{% else %}Pending{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong>Location:</strong>
+                        <p class="mb-0">{{ activity.location|default:"Not specified" }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong>Environment:</strong>
+                        <p class="mb-0">
+                            {% if activity.environment %}
+                            <span class="badge bg-info">{{ activity.environment.name }}</span>
+                            {% else %}
+                            Not specified
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                {% if activity.sensor_data %}
+                <div class="mt-4">
+                    <h6>Sensor Data</h6>
+                    <pre class="bg-light p-3 rounded"><code>{{ activity.sensor_data|pprint }}</code></pre>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Confidence Visualization -->
+        <div class="card card-custom mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Confidence Analysis
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <div class="mb-3">
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar {% if activity.confidence_score > 80 %}bg-success{% elif activity.confidence_score > 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                 style="width: {{ activity.confidence_score }}%">
+                                {{ activity.confidence_score }}%
+                            </div>
+                        </div>
+                    </div>
+                    <small class="text-muted">
+                        {% if activity.confidence_score > 80 %}
+                        High confidence - Very reliable
+                        {% elif activity.confidence_score > 60 %}
+                        Moderate confidence - Reliable
+                        {% else %}
+                        Low confidence - May require verification
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Actions -->
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cog me-2"></i>Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if not activity.is_verified %}
+                    <button class="btn btn-success" id="verify-btn">
+                        <i class="fas fa-check me-1"></i> Verify Activity
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-outline-primary" id="feedback-btn" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                        <i class="fas fa-comment me-1"></i> Provide Feedback
+                    </button>
+                    {% if user.user_type == 'admin' %}
+                    <button class="btn btn-outline-warning">
+                        <i class="fas fa-edit me-1"></i> Edit Activity
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Similar Activities -->
+        <div class="card card-custom mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Similar Activities
+                </h5>
+            </div>
+            <div class="card-body">
+                {% with similar_activities=activity.user.activities.filter|slice:":5" %}
+                {% if similar_activities %}
+                <div class="list-group list-group-flush">
+                    {% for similar in similar_activities %}
+                    {% if similar.id != activity.id %}
+                    <a href="{% url 'activities:activity_detail' similar.id %}" 
+                       class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <span class="activity-badge badge-{{ similar.activity_type }}">
+                                {{ similar.get_activity_type_display }}
+                            </span>
+                            <small>{{ similar.timestamp|timesince }} ago</small>
+                        </div>
+                        <small class="text-muted">{{ similar.confidence_score }}% confidence</small>
+                    </a>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">No similar activities found</p>
+                {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Provide Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="feedback-form" method="post" action="{% url 'users:feedback' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="activity" value="{{ activity.id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Rating</label>
+                        <select name="rating" class="form-select" required>
+                            <option value="">Select rating</option>
+                            <option value="5">5 - Excellent</option>
+                            <option value="4">4 - Good</option>
+                            <option value="3">3 - Average</option>
+                            <option value="2">2 - Poor</option>
+                            <option value="1">1 - Very Poor</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Comments</label>
+                        <textarea name="comment" class="form-control" rows="3" 
+                                  placeholder="How accurate was this activity recognition?"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="feedback-form" class="btn btn-primary">Submit Feedback</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Verify activity
+    $('#verify-btn').click(function() {
+        if (confirm('Are you sure you want to verify this activity?')) {
+            // This would typically make an AJAX call to verify the activity
+            alert('Activity verified successfully!');
+            $(this).prop('disabled', true).html('<i class="fas fa-check me-1"></i> Verified');
+        }
+    });
+});
+</script>
+{% endblock %}

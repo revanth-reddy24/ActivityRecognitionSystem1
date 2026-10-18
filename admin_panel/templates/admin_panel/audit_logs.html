@@ -1,0 +1,38 @@
+
+{% extends "base.html" %}
+{% block title %}Audit Logs - Admin Panel{% endblock %}
+{% block page_title %}Audit Logs{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header"><h5 class="mb-0">Recent Audit Logs</h5></div>
+    <div class="card-body">
+        {% if logs %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Action</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for l in logs %}
+                        <tr>
+                            <td>{{ l.timestamp }}</td>
+                            <td>{{ l.user }}</td>
+                            <td>{{ l.action }}</td>
+                            <td>{{ l.details|default:'-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No audit logs available.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

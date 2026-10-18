@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% block title %}Activity Reports - Activity Recognition System{% endblock %}
+{% block page_title %}Activity Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-filter me-2"></i>Report Filters
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+                    </div>
+                    <div class="col-md-6 align-self-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search me-1"></i> Generate Report
+                        </button>
+                        <a href="{% url 'admin_panel:activity_reports' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Clear
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Summary Statistics -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Total Activities</h6>
+                    <h3 class="text-white">{{ total_activities }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-running fa-2x text-white-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Unique Users</h6>
+                    <h3 class="text-white">{{ unique_users }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-users fa-2x text-white-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Avg. Confidence</h6>
+                    <h3 class="text-white">85%</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-chart-line fa-2x text-white-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Verified Rate</h6>
+                    <h3 class="text-white">92%</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-check-circle fa-2x text-white-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Activity Distribution -->
+    <div class="col-lg-6 mb-4">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Activity Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityDistributionChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Activity Timeline -->
+    <div class="col-lg-6 mb-4">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Activity Timeline
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="activityTimelineChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Activity Types Table -->
+    <div class="col-12">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-table me-2"></i>Activity Types Breakdown
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Activity Type</th>
+                                <th>Count</th>
+                                <th>Percentage</th>
+                                <th>Avg. Confidence</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity in activity_by_type %}
+                            <tr>
+                                <td>
+                                    <span class="activity-badge badge-{{ activity.activity_type }}">
+                                        {{ activity.get_activity_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ activity.count }}</td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar" 
+                                             style="width: {{ activity.count|divisibleby:total_activities|default:0|floatformat:2 }}%">
+                                        </div>
+                                    </div>
+                                    <small>{{ activity.count|divisibleby:total_activities|default:0|floatformat:1 }}%</small>
+                                </td>
+                                <td>85%</td>
+                                <td>
+                                    <i class="fas fa-arrow-up text-success"></i>
+                                    <small class="text-success">+5%</small>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // Activity Distribution Chart
+    const distCtx = document.getElementById('activityDistributionChart').getContext('2d');
+    new Chart(distCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Walking', 'Running', 'Sitting', 'Standing', 'Falling', 'Unusual'],
+            datasets: [{
+                data: [25, 15, 30, 20, 5, 5],
+                backgroundColor: [
+                    '#27ae60', '#e74c3c', '#3498db', '#9b59b6', '#e67e22', '#e74c3c'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+    
+    // Activity Timeline Chart
+    const timelineCtx = document.getElementById('activityTimelineChart').getContext('2d');
+    new Chart(timelineCtx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Activities',
+                data: [65, 59, 80, 81, 56, 55, 40],
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Activities'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

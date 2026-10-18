@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}User Dashboard - Activity Recognition System{% endblock %}
+{% block page_title %}User Dashboard{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <a href="{% url 'activities:real_time' %}" class="btn btn-primary">
+        <i class="fas fa-play-circle me-1"></i> Live Monitoring
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Statistics Cards -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Total Activities</h6>
+                    <h3 class="text-white">{{ user.activities.count }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-running fa-2x text-white-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Today's Activities</h6>
+                    <h3 class="text-white">{{ today_activities.count }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-calendar-day fa-2x text-white-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Unread Notifications</h6>
+                    <h3 class="text-white">{{ unread_notifications_count }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-bell fa-2x text-white-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="text-white-50">Active Sessions</h6>
+                    <h3 class="text-white">{{ active_sessions.count }}</h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-play fa-2x text-white-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Recent Activities -->
+    <div class="col-lg-8 mb-4">
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Activities
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_activities %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Activity</th>
+                                <th>Time</th>
+                                <th>Confidence</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for activity in recent_activities %}
+                            <tr>
+                                <td>
+                                    <span class="activity-badge badge-{{ activity.activity_type }}">
+                                        {{ activity.get_activity_type_display }}
+                                    </span>
+                                </td>
+                                <td>{{ activity.timestamp|timesince }} ago</td>
+                                <td>
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar {% if activity.confidence_score > 80 %}bg-success{% elif activity.confidence_score > 60 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                             style="width: {{ activity.confidence_score }}%">
+                                        </div>
+                                    </div>
+                                    <small>{{ activity.confidence_score }}%</small>
+                                </td>
+                                <td>{{ activity.location|default:"N/A" }}</td>
+                                <td>
+                                    {% if activity.is_verified %}
+                                    <span class="badge bg-success">Verified</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-running fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No activities recorded yet.</p>
+                    <a href="{% url 'activities:real_time' %}" class="btn btn-primary">
+                        Start Monitoring
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Notifications and Quick Actions -->
+    <div class="col-lg-4 mb-4">
+        <!-- Notifications Panel -->
+        <div class="card card-custom mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bell me-2"></i>Recent Notifications
+                </h5>
+                <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_notifications %}
+                <div class="list-group list-group-flush">
+                    {% for notification in recent_notifications %}
+                    <div class="list-group-item px-0 {% if not notification.is_read %}bg-light{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ notification.title }}</h6>
+                            <small>{{ notification.created_at|timesince }} ago</small>
+                        </div>
+                        <p class="mb-1 small">{{ notification.message|truncatewords:10 }}</p>
+                        <span class="badge bg-{% if notification.priority == 'high' %}danger{% elif notification.priority == 'medium' %}warning{% else %}info{% endif %}">
+                            {{ notification.get_priority_display }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-3">No new notifications</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card card-custom">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'activities:real_time' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-play me-1"></i> Real-time Monitor
+                    </a>
+                    <a href="{% url 'activities:multi_person' %}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-users me-1"></i> Multi-person View
+                    </a>
+                    <a href="{% url 'users:feedback' %}" class="btn btn-outline-warning btn-sm">
+                        <i class="fas fa-comment me-1"></i> Provide Feedback
+                    </a>
+                    <a href="{% url 'users:profile' %}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-cog me-1"></i> Profile Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
